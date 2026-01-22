@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>ניהול מלאי מחסן</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: black;
+      margin: 0;
+      padding: 0;
+      color: #222;
+      font-size: 30px;
+    }
+
+    header {
+      background: #1f3c88;
+      color: white;
+      padding: 16px 24px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    main {
+      padding: 20px 24px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #1f3c88;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px 16px;
+      align-items: flex-end;
+    }
+
+    label {
+      font-size: 13px;
+      margin-bottom: 4px;
+      display: block;
+      color: #444;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"] {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 4px;
+      padding: 8px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: #1f3c88;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #e0e4f2;
+      color: #1f3c88;
+    }
+
+    .btn-danger {
+      background: #c0392b;
+      color: white;
+    }
+
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .top-bar input[type="text"] {
+      max-width: 260px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+      background: white;
+    }
+
+    th, td {
+      border-bottom: 1px solid #eee;
+      padding: 8px 6px;
+      text-align: right;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #f0f2f8;
+      font-weight: 600;
+      color: #333;
+    }
+
+    tr.expiring-soon {
+      background: #fff7e6;
+    }
+
+    tr:hover {
+      background: #f9fbff;
+    }
+
+    img.product-img {
+      max-width: 60px;
+      max-height: 60px;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      background: #ffe0b2;
+      color: #b05a00;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 768px) {
+      th, td {
+        font-size: 12px;
+      }
+      header h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ניהול מלאי מחסן</h1>
+  </header>
+
+  <main>
+    <!-- טופס הוספה / עריכה -->
+    <section class="card">
+      <h2>פריט חדש / עריכת פריט</h2>
+      <form id="itemForm">
+        <div>
+          <label for="name">שם המוצר</label>
+          <input type="text" id="name" required />
+        </div>
+        <div>
+          <label for="quantity">כמות במלאי</label>
+          <input type="number" id="quantity" min="0" required />
+        </div>
+        <div>
+          <label for="expiry">תאריך תוקף</label>
+          <input type="date" id="expiry" required />
+        </div>
+        <div>
+          <label for="imageUrl">קישור לתמונה</label>
+          <input type="text" id="imageUrl" placeholder="https://..." />
+        </div>
+        <div>
+          <label for="suppliedTo">למי סופק המלאי</label>
+          <input type="text" id="suppliedTo" placeholder="שם גוף / מחלקה" />
+        </div>
+        <div>
+          <label for="newOrderQuantity">כמות הזמנה חדשה</label>
+          <input type="number" id="newOrderQuantity" min="0" />
+        </div>
+        <div>
+          <label for="newOrderDate">תאריך שליחת הזמנה חדשה</label>
+          <input type="date" id="newOrderDate" />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary" id="saveBtn">שמירת פריט</button>
+          <button type="button" class="btn-secondary" id="resetBtn">איפוס טופס</button>
+        </div>
+        <input type="hidden" id="editIndex" />
+      </form>
+    </section>
+
+    <!-- טבלה + חיפוש + יצוא -->
+    <section class="card">
+      <div class="top-bar">
+        <div>
+          <label for="search">חיפוש לפי שם מוצר:</label>
+          <input type="text" id="search" placeholder="הקלידי שם מוצר..." />
+        </div>
+        <div class="actions">
+          <button class="btn-secondary" id="exportBtn">הורדת דוח לאקסל (CSV)</button>
+        </div>
+      </div>
+
+      <table id="itemsTable">
+        <thead>
+          <tr>
+            <th>שם מוצר</th>
+            <th>כמות</th>
+            <th>תוקף</th>
+            <th>תמונה</th>
+            <th>למי סופק</th>
+            <th>כמות הזמנה חדשה</th>
+            <th>תאריך הזמנה חדשה</th>
+            <th>פעולות</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ימולא דינמית -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'warehouseItems';
+
+    let items = [];
+
+    function loadItems() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      items = data ? JSON.parse(data) : [];
+    }
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function isExpiringSoon(dateStr) {
+      if (!dateStr) return false;
+      const today = new Date();
+      const expiry = new Date(dateStr);
+      const diffMs = expiry - today;
+      const diffDays = diffMs / (1000  60  60 * 24);
+      return diffDays >= 0 && diffDays <= 30;
+    }
+
+    function renderTable(filterText = '') {
+      const tbody = document.querySelector('#itemsTable tbody');
+      tbody.innerHTML = '';
+
+      const normalizedFilter = filterText.trim().toLowerCase();
+
+      items
+        .map((item, index) => ({ ...item, index }))
+        .filter(item =>
+          !normalizedFilter ||
+          (item.name || '').toLowerCase().includes(normalizedFilter)
+        )
+        .forEach(item => {
+          const tr = document.createElement('tr');
+
+          if (isExpiringSoon(item.expiry)) {
+            tr.classList.add('expiring-soon');
+          }
+
+          tr.innerHTML = `
+            <td>
+              ${item.name || ''}
+              ${isExpiringSoon(item.expiry) ? '<div class="tag">תוקף עד חודש</div>' : ''}
+            </td>
+            <td>${item.quantity ?? ''}</td>
+            <td>${item.expiry || ''}</td>
+            <td>
+              ${item.imageUrl ? <img src="${item.imageUrl}" class="product-img" alt="תמונה" /> : ''}
+            </td>
+            <td>${item.suppliedTo || ''}</td>
+            <td>${item.newOrderQuantity ?? ''}</td>
+            <td>${item.newOrderDate || ''}</td>
+            <td>
+              <button class="btn-small btn-secondary" onclick="editItem(${item.index})">עריכה</button>
+              <button class="btn-small btn-danger" onclick="deleteItem(${item.index})">מחיקה</button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+    }
+
+    function resetForm() {
+      document.getElementById('itemForm').reset();
+      document.getElementById('editIndex').value = '';
+      document.getElementById('saveBtn').textContent = 'שמירת פריט';
+    }
+
+    function editItem(index) {
+      const item = items[index];
+      document.getElementById('name').value = item.name || '';
+      document.getElementById('quantity').value = item.quantity ?? '';
+      document.getElementById('expiry').value = item.expiry || '';
+      document.getElementById('imageUrl').value = item.imageUrl || '';
+      document.getElementById('suppliedTo').value = item.suppliedTo || '';
+      document.getElementById('newOrderQuantity').value = item.newOrderQuantity ?? '';
+      document.getElementById('newOrderDate').value = item.newOrderDate || '';
+      document.getElementById('editIndex').value = index;
+      document.getElementById('saveBtn').textContent = 'עדכון פריט';
+    }
+
+    function deleteItem(index) {
+      if (!confirm('למחוק את הפריט הזה?')) return;
+      items.splice(index, 1);
+      saveItems();
+      renderTable(document.getElementById('search').value);
+    }
+
+    function exportToCSV() {
+      if (!items.length) {
+        alert('אין נתונים לייצוא.');
+        return;
+      }
+
+      const headers = [
+        'שם מוצר',
+        'כמות במלאי',
+        'תאריך תוקף',
+        'קישור לתמונה',
+        'למי סופק המלאי',
+        'כמות הזמנה חדשה',
+        'תאריך הזמנה חדשה'
+      ];
+
+      const rows = items.map(item => [
+        item.name || '',
+        item.quantity ?? '',
+        item.expiry || '',
+        item.imageUrl || '',
+        item.suppliedTo || '',
+        item.newOrderQuantity ?? '',
+        item.newOrderDate || ''
+      ]);
+
+      const csvContent = [headers, ...rows]
+        .map(row =>
+          row
+            .map(field => {
+              const value = String(field).replace(/"/g, '""');
+              return "${value}";
+            })
+            .join(',')
+        )
+        .join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'inventory_report.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadItems();
+      renderTable();
+
+      const form = document.getElementById('itemForm');
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+
+        const item = {
+          name: document.getElementById('name').value.trim(),
+          quantity: Number(document.getElementById('quantity').value || 0),
+          expiry: document.getElementById('expiry').value,
+          imageUrl: document.getElementById('imageUrl').value.trim(),
+          suppliedTo: document.getElementById('suppliedTo').value.trim(),
+          newOrderQuantity: document.getElementById('newOrderQuantity').value
+            ? Number(document.getElementById('newOrderQuantity').value)
+            : null,
+          newOrderDate: document.getElementById('newOrderDate').value
+        };
+
+        const editIndex = document.getElementById('editIndex').value;
+
+        if (editIndex !== '') {
+          items[Number(editIndex)] = item;
+        } else {
+          items.push(item);
+        }
+
+        saveItems();
+        renderTable(document.getElementById('search').value);
+        resetForm();
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', resetForm);
+
+      document.getElementById('search').addEventListener('input', e => {
+        renderTable(e.target.value);
+      });
+
+      document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+    });
+
+    // חשיפה לפונקציות גלובליות עבור כפתורי הטבלה
+    window.editItem = editItem;
+    window.deleteItem = deleteItem;
+  </script>
+</body>
+</html>
+`
